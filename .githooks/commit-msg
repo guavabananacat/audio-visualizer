@@ -1,0 +1,8 @@
+#!/bin/bash -ex
+
+commit_message=$(cat "$1")   # $1 is the path to the message file
+
+if [[ "$commit_message" == *$'\n'* ]]; then
+    echo "Multi-line commit messages are forbidden! Try committing again."
+    exit 1
+fi
