@@ -7,6 +7,8 @@ use std::cell::RefCell;
 
 #[wasm_bindgen(start)]
 pub fn main() {
+    web_sys::console::log_1(&"Audio visualizer initialized".into());
+
     let window = window().expect("no global `window` exists");
     let document = window.document().expect("should have a document on window");
 
@@ -16,11 +18,14 @@ pub fn main() {
         .dyn_into::<web_sys::HtmlButtonElement>()
         .expect("start should be a button");
 
+    web_sys::console::log_1(&"Button found".into());
+
     button.set_onclick(Some(
         &wasm_bindgen::closure::Closure::once(move || {
+            web_sys::console::log_1(&"Start button clicked".into());
             wasm_bindgen_futures::spawn_local(async {
                 if let Err(e) = start_visualizer().await {
-                    web_sys::console::log_1(&format!("Error: {:?}", e).into());
+                    web_sys::console::error_1(&format!("Error: {:?}", e).into());
                 }
             });
         })
@@ -31,10 +36,12 @@ pub fn main() {
 }
 
 async fn start_visualizer() -> Result<(), JsValue> {
+    web_sys::console::log_1(&"Getting window".into());
     let window = window().ok_or("no window")?;
     let navigator = window.navigator();
     let media_devices = navigator.media_devices()?;
 
+    web_sys::console::log_1(&"Requesting user media".into());
     let constraints = web_sys::MediaStreamConstraints::new();
     constraints.set_audio(&JsValue::from_bool(true));
 
@@ -44,7 +51,9 @@ async fn start_visualizer() -> Result<(), JsValue> {
     .await?
     .dyn_into::<web_sys::MediaStream>()?;
 
+    web_sys::console::log_1(&"Got media stream".into());
     let audio_ctx = AudioContext::new()?;
+    web_sys::console::log_1(&"Created audio context".into());
     let source = audio_ctx.create_media_stream_source(&stream)?;
 
     let analyser = audio_ctx.create_analyser()?;
@@ -52,8 +61,10 @@ async fn start_visualizer() -> Result<(), JsValue> {
 
     source.connect_with_audio_node(&analyser)?;
     analyser.connect_with_audio_node(&audio_ctx.destination())?;
+    web_sys::console::log_1(&"Connected audio nodes".into());
 
     start_animation_loop(&window, &analyser)?;
+    web_sys::console::log_1(&"Animation loop started".into());
 
     Ok(())
 }

@@ -36,8 +36,8 @@
   </style>
   
 <script type="module">
-import init, * as bindings from '/audio-visualizer-20525439f5d398d.js';
-const wasm = await init({ module_or_path: '/audio-visualizer-20525439f5d398d_bg.wasm' });
+import init, * as bindings from '/audio-visualizer-5b07d03d7bc038a6.js';
+const wasm = await init({ module_or_path: '/audio-visualizer-5b07d03d7bc038a6_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -46,7 +46,11 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="/audio-visualizer-20525439f5d398d.js" crossorigin="anonymous" integrity="sha384-4J1Mcjg4Rx3dZq1RKZ2oHR/SBf/VT5yoDdhCJszV3CxUVKXoRUERK3VtwkUu0F7d"><link rel="preload" href="/audio-visualizer-20525439f5d398d_bg.wasm" crossorigin="anonymous" integrity="sha384-bY0ABqkPOt7xVWykeuXdXCz22O5yJiNYBFwYexP/Y0YDvJ7TIE9fKD735Q6Mqxls" as="fetch" type="application/wasm"></head>
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>
+    eruda.init();
+  </script>
+<link rel="modulepreload" href="/audio-visualizer-5b07d03d7bc038a6.js" crossorigin="anonymous" integrity="sha384-4j6VvbaBeJn8htP4PaBPMCF7y8GuFhHUF4pXtPYYc19hBLaZQTvIrTU0dFe1sxd3"><link rel="preload" href="/audio-visualizer-5b07d03d7bc038a6_bg.wasm" crossorigin="anonymous" integrity="sha384-aeF8x76RYSFVgOPiQDpQWALe81K2spEZLPEn2+T3fl7QCQws4BdA1eVG2N9xNpUr" as="fetch" type="application/wasm"></head>
 <body>
   <canvas id="canvas" width="800" height="400"></canvas>
   <button id="start">Start</button>

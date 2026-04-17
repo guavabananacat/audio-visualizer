@@ -45,6 +45,9 @@ function __wbg_get_imports() {
             const ret = arg0.document;
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         },
+        __wbg_error_2001591ad2463697: function(arg0) {
+            console.error(arg0);
+        },
         __wbg_fftSize_66585e2208f1fc38: function(arg0) {
             const ret = arg0.fftSize;
             return ret;
