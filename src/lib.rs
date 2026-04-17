@@ -47,7 +47,7 @@ impl Resonator {
 
     // Returns amplitude in units of input signal (0..1 for 0 dBFS sine)
     fn amplitude(&self) -> f64 {
-        let p = (self.s1 * self.s1 + self.s2 * self.s2
+        let p = (self.s1 * self.s1 + self.r2 * self.s2 * self.s2
             - self.r * self.coeff * self.s1 * self.s2)
             .max(0.0);
         (p * self.norm).sqrt()
