@@ -10,20 +10,22 @@ pub fn main() {
     let window = window().expect("no global `window` exists");
     let document = window.document().expect("should have a document on window");
 
-    let button = document
-        .get_element_by_id("start")
-        .expect("should have a start button")
-        .dyn_into::<web_sys::HtmlButtonElement>()
-        .expect("start should be a button");
+    let overlay = document
+        .get_element_by_id("start-overlay")
+        .expect("should have start-overlay")
+        .dyn_into::<web_sys::HtmlElement>()
+        .expect("start-overlay should be an HtmlElement");
 
+    let overlay_clone = overlay.clone();
     let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        let _ = overlay_clone.style().set_property("display", "none");
         wasm_bindgen_futures::spawn_local(async {
             if let Err(e) = start_visualizer().await {
                 web_sys::console::error_1(&format!("Error: {:?}", e).into());
             }
         });
     }) as Box<dyn FnMut()>);
-    button.set_onclick(Some(closure.as_ref().dyn_ref().unwrap()));
+    overlay.set_onclick(Some(closure.as_ref().dyn_ref().unwrap()));
     closure.forget();
 }
 
@@ -49,6 +51,28 @@ async fn start_visualizer() -> Result<(), JsValue> {
 
     source.connect_with_audio_node(&analyser)?;
     analyser.connect_with_audio_node(&audio_ctx.destination())?;
+
+    let document = window.document().ok_or("no document")?;
+    let canvas = document
+        .get_element_by_id("canvas")
+        .ok_or("no canvas")?
+        .dyn_into::<web_sys::HtmlCanvasElement>()?;
+
+    let w = window.inner_width()?.as_f64().unwrap_or(800.0) as u32;
+    let h = window.inner_height()?.as_f64().unwrap_or(400.0) as u32;
+    canvas.set_width(w);
+    canvas.set_height(h);
+
+    let canvas_resize = canvas.clone();
+    let window_resize = window.clone();
+    let resize_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        let w = window_resize.inner_width().ok().and_then(|v| v.as_f64()).unwrap_or(800.0) as u32;
+        let h = window_resize.inner_height().ok().and_then(|v| v.as_f64()).unwrap_or(400.0) as u32;
+        canvas_resize.set_width(w);
+        canvas_resize.set_height(h);
+    }) as Box<dyn FnMut()>);
+    window.add_event_listener_with_callback("resize", resize_closure.as_ref().dyn_ref().unwrap())?;
+    resize_closure.forget();
 
     start_animation_loop(&window, &analyser)?;
 

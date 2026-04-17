@@ -18,6 +18,8 @@ features = [
   "Document",
   "HtmlCanvasElement",
   "HtmlButtonElement",
+  "HtmlElement",
+  "CssStyleDeclaration",
   "CanvasRenderingContext2d",
   "AudioContext",
   "AudioDestinationNode",

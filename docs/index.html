@@ -10,35 +10,37 @@
       margin: 0;
       padding: 0;
       background: #000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      font-family: monospace;
+      overflow: hidden;
     }
     canvas {
-      border: 2px solid #fff;
-      margin-bottom: 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
     }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #0f0;
-      color: #000;
-      border: none;
-      border-radius: 4px;
+    #start-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #0c0;
+      z-index: 10;
+      font-family: monospace;
+      font-size: 48px;
+      color: #fff;
+      letter-spacing: 0.2em;
     }
   </style>
   
 <script type="module">
-import init, * as bindings from '/audio-visualizer/audio-visualizer-1b9fdbdfed0afd48.js';
-const wasm = await init({ module_or_path: '/audio-visualizer/audio-visualizer-1b9fdbdfed0afd48_bg.wasm' });
+import init, * as bindings from '/audio-visualizer/audio-visualizer-996a849f727257c9.js';
+const wasm = await init({ module_or_path: '/audio-visualizer/audio-visualizer-996a849f727257c9_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -47,9 +49,9 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="/audio-visualizer/audio-visualizer-1b9fdbdfed0afd48.js" crossorigin="anonymous" integrity="sha384-lpK2ZgkAdzu7eWmvmswVfOHWTHyOSp7AzX7RCEie7A2TPNxmc/+rGB92RBaQtx26"><link rel="preload" href="/audio-visualizer/audio-visualizer-1b9fdbdfed0afd48_bg.wasm" crossorigin="anonymous" integrity="sha384-KZaDdLp0Fetxws7DUXayTQr9aF3XRdkH3RzdihxcYrY3xl74AGLTck3Uj+DAIXP7" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/audio-visualizer/audio-visualizer-996a849f727257c9.js" crossorigin="anonymous" integrity="sha384-TZU/bKKS3VfI5u3Qe7n+wh9uchMPDsHpZZJn5lEuT2jTkQs7yZ52GQEjSeGXQQBT"><link rel="preload" href="/audio-visualizer/audio-visualizer-996a849f727257c9_bg.wasm" crossorigin="anonymous" integrity="sha384-4zkPPIj3Wh5q0o64I32y/duIuxyVEWxvie0kC7PnUiqdQ9HSTBLgNyQ+8u9yHwK9" as="fetch" type="application/wasm"></head>
 <body>
-  <button id="start">Start</button>
-  <canvas id="canvas" width="800" height="400"></canvas>
+  <div id="start-overlay">Start</div>
+  <canvas id="canvas"></canvas>
 </body>
 </html>
