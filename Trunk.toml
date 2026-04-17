@@ -1,4 +1,3 @@
 [build]
 dist = "docs"
 release = true
-minify = "on_release"
