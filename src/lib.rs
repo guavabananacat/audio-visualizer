@@ -16,18 +16,15 @@ pub fn main() {
         .dyn_into::<web_sys::HtmlButtonElement>()
         .expect("start should be a button");
 
-    button.set_onclick(Some(
-        &wasm_bindgen::closure::Closure::once(move || {
-            wasm_bindgen_futures::spawn_local(async {
-                if let Err(e) = start_visualizer().await {
-                    web_sys::console::error_1(&format!("Error: {:?}", e).into());
-                }
-            });
-        })
-        .into_js_value()
-        .dyn_into()
-        .unwrap(),
-    ));
+    let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        wasm_bindgen_futures::spawn_local(async {
+            if let Err(e) = start_visualizer().await {
+                web_sys::console::error_1(&format!("Error: {:?}", e).into());
+            }
+        });
+    }) as Box<dyn FnMut()>);
+    button.set_onclick(Some(closure.as_ref().dyn_ref().unwrap()));
+    closure.forget();
 }
 
 async fn start_visualizer() -> Result<(), JsValue> {
