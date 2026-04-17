@@ -41,8 +41,14 @@
     window.addEventListener("error", (e) => {
       console.error("Global error:", e.error);
     });
+    window.addEventListener("unhandledrejection", (e) => {
+      console.error("Unhandled rejection:", e.reason);
+    });
   </script>
   <link data-trunk rel="rust" />
+  <script>
+    console.log("After Trunk link");
+  </script>
 </head>
 <body>
   <button id="start">Start</button>
