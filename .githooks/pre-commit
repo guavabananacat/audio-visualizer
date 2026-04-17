@@ -1,3 +1,4 @@
-#!/bin/sh
-trunk build --release --dist docs
+#\!/bin/bash
+set -e
+trunk build --release
 git add docs/
