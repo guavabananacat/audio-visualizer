@@ -46,10 +46,6 @@ function __wbg_get_imports() {
             const ret = arg0.createMediaStreamSource(arg1);
             return ret;
         }, arguments); },
-        __wbg_destination_7aa167ec1225162d: function(arg0) {
-            const ret = arg0.destination;
-            return ret;
-        },
         __wbg_document_7a41071f2f439323: function(arg0) {
             const ret = arg0.document;
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -235,7 +231,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 1, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 27, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h007e9c99ed1f533c);
             return ret;
         },

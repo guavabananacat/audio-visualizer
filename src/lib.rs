@@ -112,7 +112,6 @@ async fn start_visualizer() -> Result<(), JsValue> {
     analyser.set_fft_size(1024);
 
     source.connect_with_audio_node(&analyser)?;
-    analyser.connect_with_audio_node(&audio_ctx.destination())?;
 
     let document = window.document().ok_or("no document")?;
     let canvas = document
