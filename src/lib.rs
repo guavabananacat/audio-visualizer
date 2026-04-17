@@ -137,10 +137,8 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode, sampl
                 let v = value as u8;
                 ctx_clone.set_fill_style_str(&format!("rgb({v},{v},{v})",));
 
-                let bar_height = (value / 255.0) * canvas_h;
                 let x = bar as f64;
-                let y = canvas_h - bar_height;
-                ctx_clone.fill_rect(x, y, 1.0, bar_height);
+                ctx_clone.fill_rect(x, 0.0, 1.0, canvas_h);
             }
 
             let callback = closure_inner.borrow().as_ref().map(|f| f.clone());
