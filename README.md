@@ -2,10 +2,8 @@
 
 https://guavabananacat.github.io/audio-visualizer/
 
-## Setup
+## Dev Setup
 
-```sh
-rustup target add wasm32-unknown-unknown
-cargo install trunk
-make setup
+```
+git config core.hooksPath .githooks
 ```

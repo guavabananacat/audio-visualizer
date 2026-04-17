@@ -1,5 +1,0 @@
-[build]
-target = "index.html"
-dist = "docs"
-public_url = "/audio-visualizer/"
-sri = false

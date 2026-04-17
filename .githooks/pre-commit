@@ -1,4 +1,3 @@
-#\!/bin/bash
-set -e
+#!/bin/bash -ex
 trunk build --release
-git add docs/
+git add dist/
