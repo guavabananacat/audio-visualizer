@@ -70,39 +70,43 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode) -> Re
         .ok_or("no 2d context")?
         .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
 
-    let mut freq_data = vec![0u8; (analyser.fft_size() / 2) as usize];
+    let fft_size = analyser.fft_size();
+    let mut freq_data = vec![0u8; (fft_size / 2) as usize];
 
     let closure: Rc<RefCell<Option<Function>>> = Rc::new(RefCell::new(None));
     let closure_clone = closure.clone();
     let closure_inner = closure.clone();
     let analyser_clone = analyser.clone();
+    let window_clone = window.clone();
+    let canvas_clone = canvas.clone();
+    let ctx_clone = ctx.clone();
 
     *closure_clone.borrow_mut() = Some(
         wasm_bindgen::closure::Closure::wrap(Box::new(move || {
             analyser_clone.get_byte_frequency_data(&mut freq_data);
 
-            ctx.set_fill_style_str("#000");
-            ctx.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
+            ctx_clone.set_fill_style_str("#000");
+            ctx_clone.fill_rect(0.0, 0.0, canvas_clone.width() as f64, canvas_clone.height() as f64);
 
-            let bar_width = (canvas.width() as f64) / (freq_data.len() as f64);
+            let bar_width = (canvas_clone.width() as f64) / (freq_data.len() as f64);
             for (i, &value) in freq_data.iter().enumerate() {
                 let hue = (i as f64 / freq_data.len() as f64 * 360.0) % 360.0;
-                ctx.set_fill_style_str(&format!(
+                ctx_clone.set_fill_style_str(&format!(
                     "hsl({}, 100%, {}%)",
                     hue,
                     50 + (value as f64 / 255.0 * 30.0) as u32
                 ));
 
-                let bar_height = (value as f64 / 255.0) * (canvas.height() as f64);
+                let bar_height = (value as f64 / 255.0) * (canvas_clone.height() as f64);
                 let x = i as f64 * bar_width;
-                let y = (canvas.height() as f64) - bar_height;
+                let y = (canvas_clone.height() as f64) - bar_height;
 
-                ctx.fill_rect(x, y, bar_width - 1.0, bar_height);
+                ctx_clone.fill_rect(x, y, bar_width - 1.0, bar_height);
             }
 
             let callback = closure_inner.borrow().as_ref().map(|f| f.clone());
             if let Some(callback) = callback {
-                let _ = window.request_animation_frame(&callback);
+                let _ = window_clone.request_animation_frame(&callback);
             }
         }) as Box<dyn FnMut()>)
         .into_js_value()
