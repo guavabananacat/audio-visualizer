@@ -111,7 +111,6 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode, sampl
             ctx_clone.fill_rect(0.0, 0.0, canvas_clone.width() as f64, canvas_clone.height() as f64);
 
             let n_bins = freq_data.len();
-            let canvas_w = canvas_clone.width() as f64;
             let canvas_h = canvas_clone.height() as f64;
             let f_min = 20.0f64;
             let f_max = (sample_rate / 2.0).min(20000.0);
