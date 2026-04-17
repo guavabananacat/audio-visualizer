@@ -134,12 +134,8 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode, sampl
                     .map(|&v| v as f64)
                     .fold(0.0f64, f64::max);
 
-                let hue = (bar as f64 / n_bars as f64 * 360.0) % 360.0;
-                ctx_clone.set_fill_style_str(&format!(
-                    "hsl({}, 100%, {}%)",
-                    hue,
-                    50 + (value / 255.0 * 30.0) as u32
-                ));
+                let v = value as u8;
+                ctx_clone.set_fill_style_str(&format!("rgb({v},{v},{v})",));
 
                 let bar_height = (value / 255.0) * canvas_h;
                 let x = bar as f64;
