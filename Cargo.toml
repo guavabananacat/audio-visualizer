@@ -28,6 +28,7 @@ features = [
   "MediaStream",
   "MediaStreamConstraints",
   "MediaStreamAudioSourceNode",
+  "MediaStreamTrack",
   "Navigator",
   "console",
 ]

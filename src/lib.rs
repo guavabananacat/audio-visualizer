@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{window, AudioContext, AnalyserNode};
+use web_sys::{window, AudioContext, AnalyserNode, MediaStreamTrack};
 use js_sys::Function;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -136,7 +136,29 @@ async fn start_visualizer() -> Result<(), JsValue> {
     resize_closure.forget();
 
     let bank = build_bank(sample_rate);
-    start_animation_loop(&window, &analyser, bank)?;
+    let running = start_animation_loop(&window, &analyser, bank)?;
+
+    let overlay = document
+        .get_element_by_id("start-overlay")
+        .ok_or("no start-overlay")?
+        .dyn_into::<web_sys::HtmlElement>()
+        .map_err(|_| "start-overlay not HtmlElement")?;
+
+    let canvas_stop = canvas.clone();
+    let stop = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        *running.borrow_mut() = false;
+        let _ = audio_ctx.close();
+        let tracks = stream.get_audio_tracks();
+        for i in 0..tracks.length() {
+            if let Ok(track) = tracks.get(i).dyn_into::<MediaStreamTrack>() {
+                track.stop();
+            }
+        }
+        canvas_stop.set_onclick(None);
+        let _ = overlay.style().set_property("display", "");
+    }) as Box<dyn FnMut()>);
+    canvas.set_onclick(Some(stop.as_ref().dyn_ref::<Function>().unwrap()));
+    stop.forget();
 
     Ok(())
 }
@@ -145,7 +167,8 @@ fn start_animation_loop(
     window: &web_sys::Window,
     analyser: &AnalyserNode,
     bank: Vec<Resonator>,
-) -> Result<(), JsValue> {
+) -> Result<Rc<RefCell<bool>>, JsValue> {
+    let running = Rc::new(RefCell::new(true));
     let document = window.document().ok_or("no document")?;
     let canvas = document
         .get_element_by_id("canvas")
@@ -169,9 +192,14 @@ fn start_animation_loop(
     let window_clone = window.clone();
     let canvas_clone = canvas.clone();
     let ctx_clone = ctx.clone();
+    let running_inner = running.clone();
 
     *closure_clone.borrow_mut() = Some(
         wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+            if !*running_inner.borrow() {
+                return;
+            }
+
             analyser_clone.get_float_time_domain_data(&mut samples.borrow_mut());
 
             {
@@ -225,5 +253,5 @@ fn start_animation_loop(
         window.request_animation_frame(closure_fn)?;
     }
 
-    Ok(())
+    Ok(running)
 }
