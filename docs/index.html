@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Visualizer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: monospace;
+    }
+    canvas {
+      border: 2px solid #fff;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0c0;
+    }
+  </style>
+  
+<script type="module">
+import init, * as bindings from '/audio-visualizer-20525439f5d398d.js';
+const wasm = await init({ module_or_path: '/audio-visualizer-20525439f5d398d_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+<link rel="modulepreload" href="/audio-visualizer-20525439f5d398d.js" crossorigin="anonymous" integrity="sha384-4J1Mcjg4Rx3dZq1RKZ2oHR/SBf/VT5yoDdhCJszV3CxUVKXoRUERK3VtwkUu0F7d"><link rel="preload" href="/audio-visualizer-20525439f5d398d_bg.wasm" crossorigin="anonymous" integrity="sha384-bY0ABqkPOt7xVWykeuXdXCz22O5yJiNYBFwYexP/Y0YDvJ7TIE9fKD735Q6Mqxls" as="fetch" type="application/wasm"></head>
+<body>
+  <canvas id="canvas" width="800" height="400"></canvas>
+  <button id="start">Start</button>
+</body>
+</html>

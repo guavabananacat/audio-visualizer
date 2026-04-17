@@ -35,7 +35,7 @@ async fn start_visualizer() -> Result<(), JsValue> {
     let navigator = window.navigator();
     let media_devices = navigator.media_devices()?;
 
-    let mut constraints = web_sys::MediaStreamConstraints::new();
+    let constraints = web_sys::MediaStreamConstraints::new();
     constraints.set_audio(&JsValue::from_bool(true));
 
     let stream = wasm_bindgen_futures::JsFuture::from(
@@ -74,6 +74,7 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode) -> Re
 
     let closure: Rc<RefCell<Option<Function>>> = Rc::new(RefCell::new(None));
     let closure_clone = closure.clone();
+    let closure_inner = closure.clone();
     let analyser_clone = analyser.clone();
 
     *closure_clone.borrow_mut() = Some(
@@ -99,7 +100,7 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode) -> Re
                 ctx.fill_rect(x, y, bar_width - 1.0, bar_height);
             }
 
-            let callback = closure_clone.borrow().as_ref().map(|f| f.clone());
+            let callback = closure_inner.borrow().as_ref().map(|f| f.clone());
             if let Some(callback) = callback {
                 let _ = window.request_animation_frame(&callback);
             }
