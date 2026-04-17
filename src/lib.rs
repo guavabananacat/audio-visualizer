@@ -1,6 +1,7 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{window, AudioContext, AnalyserNode, MediaStreamAudioSourceNode};
+use web_sys::{window, AudioContext, AnalyserNode};
+use js_sys::Function;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -35,7 +36,7 @@ async fn start_visualizer() -> Result<(), JsValue> {
     let media_devices = navigator.media_devices()?;
 
     let mut constraints = web_sys::MediaStreamConstraints::new();
-    constraints.audio(&JsValue::from_bool(true));
+    constraints.set_audio(&JsValue::from_bool(true));
 
     let stream = wasm_bindgen_futures::JsFuture::from(
         media_devices.get_user_media_with_constraints(&constraints)?
@@ -69,27 +70,27 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode) -> Re
         .ok_or("no 2d context")?
         .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
 
-    let freq_data = js_sys::Uint8Array::new_with_length(analyser.fft_size());
+    let mut freq_data = vec![0u8; analyser.fft_size() as usize];
 
-    let closure = Rc::new(RefCell::new(None::<web_sys::Function>));
+    let closure: Rc<RefCell<Option<Function>>> = Rc::new(RefCell::new(None));
     let closure_clone = closure.clone();
     let analyser_clone = analyser.clone();
 
     *closure_clone.borrow_mut() = Some(
         wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-            analyser_clone.get_byte_frequency_data(&freq_data);
+            analyser_clone.get_byte_frequency_data(&mut freq_data);
 
-            ctx.set_fill_style(&JsValue::from_str("#000"));
+            ctx.set_fill_style_str("#000");
             ctx.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
 
-            let bar_width = (canvas.width() as f64) / (freq_data.length() as f64);
-            for (i, &value) in freq_data.to_vec().iter().enumerate() {
-                let hue = (i as f64 / freq_data.length() as f64 * 360.0) % 360.0;
-                ctx.set_fill_style(&JsValue::from_str(&format!(
+            let bar_width = (canvas.width() as f64) / (freq_data.len() as f64);
+            for (i, &value) in freq_data.iter().enumerate() {
+                let hue = (i as f64 / freq_data.len() as f64 * 360.0) % 360.0;
+                ctx.set_fill_style_str(&format!(
                     "hsl({}, 100%, {}%)",
                     hue,
                     50 + (value as f64 / 255.0 * 30.0) as u32
-                )));
+                ));
 
                 let bar_height = (value as f64 / 255.0) * (canvas.height() as f64);
                 let x = i as f64 * bar_width;

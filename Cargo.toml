@@ -17,14 +17,17 @@ features = [
   "Window",
   "Document",
   "HtmlCanvasElement",
+  "HtmlButtonElement",
   "CanvasRenderingContext2d",
   "AudioContext",
+  "AudioDestinationNode",
   "AnalyserNode",
   "MediaDevices",
   "MediaStream",
   "MediaStreamConstraints",
   "MediaStreamAudioSourceNode",
   "Navigator",
+  "console",
 ]
 
 [profile.release]
