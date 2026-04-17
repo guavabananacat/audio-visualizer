@@ -47,7 +47,14 @@
   </script>
   <link data-trunk rel="rust" />
   <script>
-    console.log("After Trunk link");
+    window.addEventListener("TrunkApplicationStarted", () => {
+      console.log("WASM initialization succeeded");
+    });
+    setTimeout(() => {
+      if (!window.wasmBindings) {
+        console.error("WASM failed to load after 2 seconds");
+      }
+    }, 2000);
   </script>
 </head>
 <body>

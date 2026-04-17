@@ -58,7 +58,14 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
   <script>
-    console.log("After Trunk link");
+    window.addEventListener("TrunkApplicationStarted", () => {
+      console.log("WASM initialization succeeded");
+    });
+    setTimeout(() => {
+      if (!window.wasmBindings) {
+        console.error("WASM failed to load after 2 seconds");
+      }
+    }, 2000);
   </script>
 <link rel="modulepreload" href="/audio-visualizer-5b07d03d7bc038a6.js" crossorigin="anonymous" integrity="sha384-4j6VvbaBeJn8htP4PaBPMCF7y8GuFhHUF4pXtPYYc19hBLaZQTvIrTU0dFe1sxd3"><link rel="preload" href="/audio-visualizer-5b07d03d7bc038a6_bg.wasm" crossorigin="anonymous" integrity="sha384-aeF8x76RYSFVgOPiQDpQWALe81K2spEZLPEn2+T3fl7QCQws4BdA1eVG2N9xNpUr" as="fetch" type="application/wasm"></head>
 <body>
