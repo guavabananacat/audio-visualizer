@@ -48,7 +48,7 @@ async fn start_visualizer() -> Result<(), JsValue> {
     let source = audio_ctx.create_media_stream_source(&stream)?;
 
     let analyser = audio_ctx.create_analyser()?;
-    analyser.set_fft_size(512);
+    analyser.set_fft_size(1024);
 
     source.connect_with_audio_node(&analyser)?;
     analyser.connect_with_audio_node(&audio_ctx.destination())?;
