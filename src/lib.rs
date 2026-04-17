@@ -5,6 +5,67 @@ use js_sys::Function;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+const BINS_PER_OCTAVE: i32 = 12;
+const F_MIN: f64 = 20.0;
+const F_MAX: f64 = 20000.0;
+const DB_MIN: f64 = -60.0;
+const DB_MAX: f64 = 0.0;
+
+struct Resonator {
+    s1: f64,
+    s2: f64,
+    coeff: f64,
+    r: f64,
+    r2: f64,
+    // multiply raw power by this to normalize to input amplitude²
+    norm: f64,
+}
+
+impl Resonator {
+    fn new(freq: f64, sample_rate: f64, q: f64) -> Self {
+        let omega = 2.0 * std::f64::consts::PI * freq / sample_rate;
+        let r = (-std::f64::consts::PI * freq / (q * sample_rate)).exp();
+        // |H(e^{jω₀})|² = 1 / ((1-r)² · (1 - 2r·cos(2ω₀) + r²))
+        let gain_sq = 1.0
+            / ((1.0 - r).powi(2) * (1.0 - 2.0 * r * (2.0 * omega).cos() + r * r));
+        Self {
+            s1: 0.0,
+            s2: 0.0,
+            coeff: 2.0 * omega.cos(),
+            r,
+            r2: r * r,
+            norm: 1.0 / gain_sq,
+        }
+    }
+
+    #[inline]
+    fn process(&mut self, x: f64) {
+        let s0 = x + self.r * self.coeff * self.s1 - self.r2 * self.s2;
+        self.s2 = self.s1;
+        self.s1 = s0;
+    }
+
+    // Returns amplitude in units of input signal (0..1 for 0 dBFS sine)
+    fn amplitude(&self) -> f64 {
+        let p = (self.s1 * self.s1 + self.s2 * self.s2
+            - self.r * self.coeff * self.s1 * self.s2)
+            .max(0.0);
+        (p * self.norm).sqrt()
+    }
+}
+
+fn build_bank(sample_rate: f64) -> Vec<Resonator> {
+    let q = 1.0 / (2.0_f64.powf(1.0 / BINS_PER_OCTAVE as f64) - 1.0);
+    let f_top = F_MAX.min(sample_rate * 0.499);
+    let n_bins = (BINS_PER_OCTAVE as f64 * (f_top / F_MIN).log2()).ceil() as usize;
+    (0..n_bins)
+        .map(|k| {
+            let freq = F_MIN * 2.0_f64.powf(k as f64 / BINS_PER_OCTAVE as f64);
+            Resonator::new(freq, sample_rate, q)
+        })
+        .collect()
+}
+
 #[wasm_bindgen(start)]
 pub fn main() {
     let window = window().expect("no global `window` exists");
@@ -75,12 +136,17 @@ async fn start_visualizer() -> Result<(), JsValue> {
     window.add_event_listener_with_callback("resize", resize_closure.as_ref().dyn_ref().unwrap())?;
     resize_closure.forget();
 
-    start_animation_loop(&window, &analyser, sample_rate)?;
+    let bank = build_bank(sample_rate);
+    start_animation_loop(&window, &analyser, bank)?;
 
     Ok(())
 }
 
-fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode, sample_rate: f64) -> Result<(), JsValue> {
+fn start_animation_loop(
+    window: &web_sys::Window,
+    analyser: &AnalyserNode,
+    bank: Vec<Resonator>,
+) -> Result<(), JsValue> {
     let document = window.document().ok_or("no document")?;
     let canvas = document
         .get_element_by_id("canvas")
@@ -92,8 +158,10 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode, sampl
         .ok_or("no 2d context")?
         .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
 
-    let fft_size = analyser.fft_size();
-    let mut freq_data = vec![0u8; (fft_size / 2) as usize];
+    let fft_size = analyser.fft_size() as usize;
+    let samples = vec![0.0f32; fft_size];
+    let bank = Rc::new(RefCell::new(bank));
+    let samples = Rc::new(RefCell::new(samples));
 
     let closure: Rc<RefCell<Option<Function>>> = Rc::new(RefCell::new(None));
     let closure_clone = closure.clone();
@@ -105,40 +173,43 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode, sampl
 
     *closure_clone.borrow_mut() = Some(
         wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-            analyser_clone.get_byte_frequency_data(&mut freq_data);
+            analyser_clone.get_float_time_domain_data(&mut samples.borrow_mut());
+
+            {
+                let mut bank = bank.borrow_mut();
+                let samples = samples.borrow();
+                for &s in samples.iter() {
+                    for res in bank.iter_mut() {
+                        res.process(s as f64);
+                    }
+                }
+            }
 
             ctx_clone.set_fill_style_str("#000");
             ctx_clone.fill_rect(0.0, 0.0, canvas_clone.width() as f64, canvas_clone.height() as f64);
 
-            let n_bins = freq_data.len();
+            let canvas_w = canvas_clone.width() as usize;
             let canvas_h = canvas_clone.height() as f64;
-            let f_min = 20.0f64;
-            let f_max = (sample_rate / 2.0).min(20000.0);
-            let log_min = f_min.ln();
-            let log_max = f_max.ln();
-            // Each bar maps a log-spaced frequency range to one pixel column
-            let n_bars = canvas_clone.width() as usize;
-            for bar in 0..n_bars {
-                let t_low = bar as f64 / n_bars as f64;
-                let t_high = (bar + 1) as f64 / n_bars as f64;
-                let f_low = (log_min + t_low * (log_max - log_min)).exp();
-                let f_high = (log_min + t_high * (log_max - log_min)).exp();
+            let bank = bank.borrow();
+            let n_bins = bank.len() as f64;
+            let log_ratio = (F_MAX / F_MIN).ln();
 
-                let bin_low = ((f_low * n_bins as f64 * 2.0) / sample_rate) as usize;
-                let bin_high = ((f_high * n_bins as f64 * 2.0) / sample_rate) as usize;
-                let bin_low = bin_low.min(n_bins - 1);
-                let bin_high = bin_high.min(n_bins).max(bin_low + 1);
+            for x in 0..canvas_w {
+                let t = x as f64 / canvas_w as f64;
+                let freq = F_MIN * (t * log_ratio).exp();
+                let k = (BINS_PER_OCTAVE as f64 * (freq / F_MIN).log2())
+                    .round()
+                    .clamp(0.0, n_bins - 1.0) as usize;
 
-                let value = freq_data[bin_low..bin_high]
-                    .iter()
-                    .map(|&v| v as f64)
-                    .fold(0.0f64, f64::max);
+                let amp = bank[k].amplitude();
+                let db = 20.0 * amp.max(1e-9).log10();
+                let v = ((db - DB_MIN) / (DB_MAX - DB_MIN)).clamp(0.0, 1.0);
+                let brightness = (v * 255.0) as u8;
 
-                let v = value as u8;
-                ctx_clone.set_fill_style_str(&format!("rgb({v},{v},{v})",));
-
-                let x = bar as f64;
-                ctx_clone.fill_rect(x, 0.0, 1.0, canvas_h);
+                ctx_clone.set_fill_style_str(&format!(
+                    "rgb({brightness},{brightness},{brightness})"
+                ));
+                ctx_clone.fill_rect(x as f64, 0.0, 1.0, canvas_h);
             }
 
             let callback = closure_inner.borrow().as_ref().map(|f| f.clone());
