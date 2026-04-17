@@ -1,0 +1,3 @@
+#!/bin/sh
+trunk build --release --dist docs
+git add docs/
