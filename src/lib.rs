@@ -44,6 +44,7 @@ async fn start_visualizer() -> Result<(), JsValue> {
     .dyn_into::<web_sys::MediaStream>()?;
 
     let audio_ctx = AudioContext::new()?;
+    let sample_rate = audio_ctx.sample_rate() as f64;
     let source = audio_ctx.create_media_stream_source(&stream)?;
 
     let analyser = audio_ctx.create_analyser()?;
@@ -74,12 +75,12 @@ async fn start_visualizer() -> Result<(), JsValue> {
     window.add_event_listener_with_callback("resize", resize_closure.as_ref().dyn_ref().unwrap())?;
     resize_closure.forget();
 
-    start_animation_loop(&window, &analyser)?;
+    start_animation_loop(&window, &analyser, sample_rate)?;
 
     Ok(())
 }
 
-fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode) -> Result<(), JsValue> {
+fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode, sample_rate: f64) -> Result<(), JsValue> {
     let document = window.document().ok_or("no document")?;
     let canvas = document
         .get_element_by_id("canvas")
@@ -109,20 +110,42 @@ fn start_animation_loop(window: &web_sys::Window, analyser: &AnalyserNode) -> Re
             ctx_clone.set_fill_style_str("#000");
             ctx_clone.fill_rect(0.0, 0.0, canvas_clone.width() as f64, canvas_clone.height() as f64);
 
-            let bar_width = (canvas_clone.width() as f64) / (freq_data.len() as f64);
-            for (i, &value) in freq_data.iter().enumerate() {
-                let hue = (i as f64 / freq_data.len() as f64 * 360.0) % 360.0;
+            let n_bins = freq_data.len();
+            let canvas_w = canvas_clone.width() as f64;
+            let canvas_h = canvas_clone.height() as f64;
+            let f_min = 20.0f64;
+            let f_max = (sample_rate / 2.0).min(20000.0);
+            let log_min = f_min.ln();
+            let log_max = f_max.ln();
+            // Each bar maps a log-spaced frequency range to one pixel column
+            let n_bars = canvas_clone.width() as usize;
+            for bar in 0..n_bars {
+                let t_low = bar as f64 / n_bars as f64;
+                let t_high = (bar + 1) as f64 / n_bars as f64;
+                let f_low = (log_min + t_low * (log_max - log_min)).exp();
+                let f_high = (log_min + t_high * (log_max - log_min)).exp();
+
+                let bin_low = ((f_low * n_bins as f64 * 2.0) / sample_rate) as usize;
+                let bin_high = ((f_high * n_bins as f64 * 2.0) / sample_rate) as usize;
+                let bin_low = bin_low.min(n_bins - 1);
+                let bin_high = bin_high.min(n_bins).max(bin_low + 1);
+
+                let value = freq_data[bin_low..bin_high]
+                    .iter()
+                    .map(|&v| v as f64)
+                    .fold(0.0f64, f64::max);
+
+                let hue = (bar as f64 / n_bars as f64 * 360.0) % 360.0;
                 ctx_clone.set_fill_style_str(&format!(
                     "hsl({}, 100%, {}%)",
                     hue,
-                    50 + (value as f64 / 255.0 * 30.0) as u32
+                    50 + (value / 255.0 * 30.0) as u32
                 ));
 
-                let bar_height = (value as f64 / 255.0) * (canvas_clone.height() as f64);
-                let x = i as f64 * bar_width;
-                let y = (canvas_clone.height() as f64) - bar_height;
-
-                ctx_clone.fill_rect(x, y, bar_width - 1.0, bar_height);
+                let bar_height = (value / 255.0) * canvas_h;
+                let x = bar as f64;
+                let y = canvas_h - bar_height;
+                ctx_clone.fill_rect(x, y, 1.0, bar_height);
             }
 
             let callback = closure_inner.borrow().as_ref().map(|f| f.clone());
