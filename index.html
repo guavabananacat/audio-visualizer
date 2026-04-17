@@ -34,11 +34,15 @@
       background: #0c0;
     }
   </style>
-  <link data-trunk rel="rust" />
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>
     eruda.init();
+    console.log("Page loaded, waiting for WASM...");
+    window.addEventListener("error", (e) => {
+      console.error("Global error:", e.error);
+    });
   </script>
+  <link data-trunk rel="rust" />
 </head>
 <body>
   <canvas id="canvas" width="800" height="400"></canvas>

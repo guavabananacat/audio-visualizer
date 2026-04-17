@@ -34,6 +34,14 @@
       background: #0c0;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>
+    eruda.init();
+    console.log("Page loaded, waiting for WASM...");
+    window.addEventListener("error", (e) => {
+      console.error("Global error:", e.error);
+    });
+  </script>
   
 <script type="module">
 import init, * as bindings from '/audio-visualizer-5b07d03d7bc038a6.js';
@@ -46,10 +54,6 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>
-    eruda.init();
-  </script>
 <link rel="modulepreload" href="/audio-visualizer-5b07d03d7bc038a6.js" crossorigin="anonymous" integrity="sha384-4j6VvbaBeJn8htP4PaBPMCF7y8GuFhHUF4pXtPYYc19hBLaZQTvIrTU0dFe1sxd3"><link rel="preload" href="/audio-visualizer-5b07d03d7bc038a6_bg.wasm" crossorigin="anonymous" integrity="sha384-aeF8x76RYSFVgOPiQDpQWALe81K2spEZLPEn2+T3fl7QCQws4BdA1eVG2N9xNpUr" as="fetch" type="application/wasm"></head>
 <body>
   <canvas id="canvas" width="800" height="400"></canvas>
