@@ -34,48 +34,7 @@
       background: #0c0;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>
-    eruda.init();
-    console.log("Page loaded, waiting for WASM...");
-    window.addEventListener("error", (e) => {
-      console.error("Global error:", e.error);
-    });
-    window.addEventListener("unhandledrejection", (e) => {
-      console.error("Unhandled rejection:", e.reason);
-    });
-  </script>
   <link data-trunk rel="rust" />
-  <script>
-    window.addEventListener("TrunkApplicationStarted", () => {
-      console.log("WASM initialization succeeded");
-    });
-
-    (async () => {
-      try {
-        console.log("Checking WASM file availability...");
-        const files = document.querySelectorAll('link[rel="preload"][type="application/wasm"]');
-        console.log("Found WASM preload links:", files.length);
-
-        for (const link of files) {
-          console.log("WASM href:", link.href);
-          const response = await fetch(link.href);
-          console.log("WASM fetch status:", response.status);
-          if (!response.ok) {
-            console.error("WASM fetch failed:", response.statusText);
-          }
-        }
-      } catch (e) {
-        console.error("WASM check error:", e);
-      }
-    })();
-
-    setTimeout(() => {
-      if (!window.wasmBindings) {
-        console.error("WASM failed to load after 2 seconds");
-      }
-    }, 2000);
-  </script>
 </head>
 <body>
   <button id="start">Start</button>

@@ -124,9 +124,6 @@ function __wbg_get_imports() {
             const ret = result;
             return ret;
         },
-        __wbg_log_7e1aa9064a1dbdbd: function(arg0) {
-            console.log(arg0);
-        },
         __wbg_mediaDevices_b9d943bd4a64962e: function() { return handleError(function (arg0) {
             const ret = arg0.mediaDevices;
             return ret;
