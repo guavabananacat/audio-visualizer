@@ -1,6 +1,7 @@
 use js_sys::Function;
 use std::cell::RefCell;
 use std::rc::Rc;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, AnalyserNode, AudioContext, MediaStreamTrack};
@@ -44,12 +45,12 @@ impl Resonator {
         self.s1 = s0;
     }
 
-    // Returns amplitude in units of input signal (0..1 for 0 dBFS sine)
-    fn amplitude(&self) -> f64 {
+    // 10·log10(p·norm) == 20·log10(√(p·norm)), avoids sqrt
+    fn power_db(&self) -> f64 {
         let p = (self.s1 * self.s1 + self.r2 * self.s2 * self.s2
             - self.r * self.coeff * self.s1 * self.s2)
             .max(0.0);
-        (p * self.norm).sqrt()
+        10.0 * (p * self.norm).max(1e-18).log10()
     }
 }
 
@@ -77,7 +78,7 @@ pub fn main() {
         .expect("start-overlay should be an HtmlElement");
 
     let overlay_clone = overlay.clone();
-    let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+    let closure = Closure::wrap(Box::new(move || {
         let _ = overlay_clone.style().set_property("display", "none");
         wasm_bindgen_futures::spawn_local(async {
             if let Err(e) = start_visualizer().await {
@@ -125,7 +126,7 @@ async fn start_visualizer() -> Result<(), JsValue> {
 
     let canvas_resize = canvas.clone();
     let window_resize = window.clone();
-    let resize_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+    let resize_closure = Closure::wrap(Box::new(move || {
         let w = window_resize
             .inner_width()
             .ok()
@@ -153,7 +154,7 @@ async fn start_visualizer() -> Result<(), JsValue> {
         .map_err(|_| "start-overlay not HtmlElement")?;
 
     let canvas_stop = canvas.clone();
-    let stop = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+    let stop = Closure::wrap(Box::new(move || {
         *running.borrow_mut() = false;
         let _ = audio_ctx.close();
         let tracks = stream.get_audio_tracks();
@@ -189,84 +190,78 @@ fn start_animation_loop(
         .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
 
     let fft_size = analyser.fft_size() as usize;
-    let samples = vec![0.0f32; fft_size];
+    let mut samples = vec![0.0f32; fft_size];
     let bank = Rc::new(RefCell::new(bank));
-    let samples = Rc::new(RefCell::new(samples));
 
-    let closure: Rc<RefCell<Option<Function>>> = Rc::new(RefCell::new(None));
-    let closure_clone = closure.clone();
-    let closure_inner = closure.clone();
+    let cb: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
+    let cb2 = cb.clone();
     let analyser_clone = analyser.clone();
     let window_clone = window.clone();
     let canvas_clone = canvas.clone();
     let ctx_clone = ctx.clone();
     let running_inner = running.clone();
 
-    *closure_clone.borrow_mut() = Some(
-        wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-            if !*running_inner.borrow() {
-                return;
-            }
+    *cb.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        if !*running_inner.borrow() {
+            return;
+        }
 
-            analyser_clone.get_float_time_domain_data(&mut samples.borrow_mut());
+        analyser_clone.get_float_time_domain_data(&mut samples);
 
-            {
-                let mut bank = bank.borrow_mut();
-                let samples = samples.borrow();
-                // AoS layout + no simd128 target-feature prevents auto-vectorization of the
-                // inner loop. SoA (separate Vecs for s1/s2/coeff/r/r2) + `-C target-feature=+simd128`
-                // would let LLVM emit f64x2 ops across resonators for a given sample.
-                for &s in samples.iter() {
-                    for res in bank.iter_mut() {
-                        res.process(s as f64);
-                    }
+        {
+            let mut bank = bank.borrow_mut();
+            let samples = &samples;
+            // AoS layout + no simd128 target-feature prevents auto-vectorization of the
+            // inner loop. SoA (separate Vecs for s1/s2/coeff/r/r2) + `-C target-feature=+simd128`
+            // would let LLVM emit f64x2 ops across resonators for a given sample.
+            for &s in samples.iter() {
+                for res in bank.iter_mut() {
+                    res.process(s as f64);
                 }
             }
+        }
 
-            ctx_clone.set_fill_style_str("#000");
-            ctx_clone.fill_rect(
-                0.0,
-                0.0,
-                canvas_clone.width() as f64,
-                canvas_clone.height() as f64,
-            );
+        let canvas_w = canvas_clone.width() as usize;
+        let canvas_h = canvas_clone.height() as usize;
+        let mut pixels = vec![0u8; canvas_w * canvas_h * 4];
+        let bank = bank.borrow();
+        let n_bins = bank.len() as f64;
+        let log_ratio = (F_MAX / F_MIN).ln();
 
-            let canvas_w = canvas_clone.width() as usize;
-            let canvas_h = canvas_clone.height() as f64;
-            let bank = bank.borrow();
-            let n_bins = bank.len() as f64;
-            let log_ratio = (F_MAX / F_MIN).ln();
+        for x in 0..canvas_w {
+            let t = x as f64 / canvas_w as f64;
+            let freq = F_MIN * (t * log_ratio).exp();
+            let k = (BINS_PER_OCTAVE as f64 * (freq / F_MIN).log2())
+                .round()
+                .clamp(0.0, n_bins - 1.0) as usize;
 
-            for x in 0..canvas_w {
-                let t = x as f64 / canvas_w as f64;
-                let freq = F_MIN * (t * log_ratio).exp();
-                let k = (BINS_PER_OCTAVE as f64 * (freq / F_MIN).log2())
-                    .round()
-                    .clamp(0.0, n_bins - 1.0) as usize;
+            let db = bank[k].power_db();
+            let v = ((db - DB_MIN) / (DB_MAX - DB_MIN)).clamp(0.0, 1.0);
+            let brightness = (v * 255.0) as u8;
 
-                let amp = bank[k].amplitude();
-                let db = 20.0 * amp.max(1e-9).log10();
-                let v = ((db - DB_MIN) / (DB_MAX - DB_MIN)).clamp(0.0, 1.0);
-                let brightness = (v * 255.0) as u8;
-
-                ctx_clone
-                    .set_fill_style_str(&format!("rgb({brightness},{brightness},{brightness})"));
-                ctx_clone.fill_rect(x as f64, 0.0, 1.0, canvas_h);
+            for y in 0..canvas_h {
+                let i = (y * canvas_w + x) * 4;
+                pixels[i] = brightness;
+                pixels[i + 1] = brightness;
+                pixels[i + 2] = brightness;
+                pixels[i + 3] = 255;
             }
+        }
 
-            let callback = closure_inner.borrow().as_ref().map(|f| f.clone());
-            if let Some(callback) = callback {
-                let _ = window_clone.request_animation_frame(&callback);
-            }
-        }) as Box<dyn FnMut()>)
-        .into_js_value()
-        .dyn_into()
-        .unwrap(),
-    );
+        let image_data = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
+            wasm_bindgen::Clamped(&pixels),
+            canvas_w as u32,
+            canvas_h as u32,
+        )
+        .unwrap();
+        let _ = ctx_clone.put_image_data(&image_data, 0.0, 0.0);
 
-    if let Some(closure_fn) = closure.borrow().as_ref() {
-        window.request_animation_frame(closure_fn)?;
-    }
+        window_clone
+            .request_animation_frame(cb2.borrow().as_ref().unwrap().as_ref().unchecked_ref())
+            .unwrap();
+    }) as Box<dyn FnMut()>));
+
+    window.request_animation_frame(cb.borrow().as_ref().unwrap().as_ref().unchecked_ref())?;
 
     Ok(running)
 }
