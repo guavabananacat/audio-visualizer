@@ -1,9 +1,9 @@
+use js_sys::Function;
+use std::cell::RefCell;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{window, AudioContext, AnalyserNode, MediaStreamTrack};
-use js_sys::Function;
-use std::rc::Rc;
-use std::cell::RefCell;
+use web_sys::{window, AnalyserNode, AudioContext, MediaStreamTrack};
 
 const BINS_PER_OCTAVE: i32 = 12;
 const F_MIN: f64 = 20.0;
@@ -26,8 +26,7 @@ impl Resonator {
         let omega = 2.0 * std::f64::consts::PI * freq / sample_rate;
         let r = (-std::f64::consts::PI * freq / (q * sample_rate)).exp();
         // |H(e^{jω₀})|² = 1 / ((1-r)² · (1 - 2r·cos(2ω₀) + r²))
-        let gain_sq = 1.0
-            / ((1.0 - r).powi(2) * (1.0 - 2.0 * r * (2.0 * omega).cos() + r * r));
+        let gain_sq = 1.0 / ((1.0 - r).powi(2) * (1.0 - 2.0 * r * (2.0 * omega).cos() + r * r));
         Self {
             s1: 0.0,
             s2: 0.0,
@@ -99,7 +98,7 @@ async fn start_visualizer() -> Result<(), JsValue> {
     constraints.set_audio(&JsValue::from_bool(true));
 
     let stream = wasm_bindgen_futures::JsFuture::from(
-        media_devices.get_user_media_with_constraints(&constraints)?
+        media_devices.get_user_media_with_constraints(&constraints)?,
     )
     .await?
     .dyn_into::<web_sys::MediaStream>()?;
@@ -127,12 +126,21 @@ async fn start_visualizer() -> Result<(), JsValue> {
     let canvas_resize = canvas.clone();
     let window_resize = window.clone();
     let resize_closure = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-        let w = window_resize.inner_width().ok().and_then(|v| v.as_f64()).unwrap_or(800.0) as u32;
-        let h = window_resize.inner_height().ok().and_then(|v| v.as_f64()).unwrap_or(400.0) as u32;
+        let w = window_resize
+            .inner_width()
+            .ok()
+            .and_then(|v| v.as_f64())
+            .unwrap_or(800.0) as u32;
+        let h = window_resize
+            .inner_height()
+            .ok()
+            .and_then(|v| v.as_f64())
+            .unwrap_or(400.0) as u32;
         canvas_resize.set_width(w);
         canvas_resize.set_height(h);
     }) as Box<dyn FnMut()>);
-    window.add_event_listener_with_callback("resize", resize_closure.as_ref().dyn_ref().unwrap())?;
+    window
+        .add_event_listener_with_callback("resize", resize_closure.as_ref().dyn_ref().unwrap())?;
     resize_closure.forget();
 
     let bank = build_bank(sample_rate);
@@ -213,7 +221,12 @@ fn start_animation_loop(
             }
 
             ctx_clone.set_fill_style_str("#000");
-            ctx_clone.fill_rect(0.0, 0.0, canvas_clone.width() as f64, canvas_clone.height() as f64);
+            ctx_clone.fill_rect(
+                0.0,
+                0.0,
+                canvas_clone.width() as f64,
+                canvas_clone.height() as f64,
+            );
 
             let canvas_w = canvas_clone.width() as usize;
             let canvas_h = canvas_clone.height() as f64;
@@ -233,9 +246,8 @@ fn start_animation_loop(
                 let v = ((db - DB_MIN) / (DB_MAX - DB_MIN)).clamp(0.0, 1.0);
                 let brightness = (v * 255.0) as u8;
 
-                ctx_clone.set_fill_style_str(&format!(
-                    "rgb({brightness},{brightness},{brightness})"
-                ));
+                ctx_clone
+                    .set_fill_style_str(&format!("rgb({brightness},{brightness},{brightness})"));
                 ctx_clone.fill_rect(x as f64, 0.0, 1.0, canvas_h);
             }
 

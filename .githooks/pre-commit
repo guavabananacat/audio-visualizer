@@ -1,3 +1,4 @@
 #!/bin/bash -ex
+cargo fmt
 trunk build
-git add docs/
+git add .
