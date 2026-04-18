@@ -213,6 +213,9 @@ fn start_animation_loop(
             {
                 let mut bank = bank.borrow_mut();
                 let samples = samples.borrow();
+                // AoS layout + no simd128 target-feature prevents auto-vectorization of the
+                // inner loop. SoA (separate Vecs for s1/s2/coeff/r/r2) + `-C target-feature=+simd128`
+                // would let LLVM emit f64x2 ops across resonators for a given sample.
                 for &s in samples.iter() {
                     for res in bank.iter_mut() {
                         res.process(s as f64);

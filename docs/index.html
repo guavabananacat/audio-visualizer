@@ -39,8 +39,8 @@
   </style>
   
 <script type="module">
-import init, * as bindings from '/audio-visualizer/audio-visualizer-1a47e1f4c5e6d31d.js';
-const wasm = await init({ module_or_path: '/audio-visualizer/audio-visualizer-1a47e1f4c5e6d31d_bg.wasm' });
+import init, * as bindings from '/audio-visualizer/audio-visualizer-343743a0bb922b9d.js';
+const wasm = await init({ module_or_path: '/audio-visualizer/audio-visualizer-343743a0bb922b9d_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -49,7 +49,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="/audio-visualizer/audio-visualizer-1a47e1f4c5e6d31d.js" crossorigin="anonymous" integrity="sha384-Surgrl+1ZbEXD4I2bLieiUiFqDBDiyvWxb+oZaANdAmdU5y/Irl9PSagCQ9ETqVb"><link rel="preload" href="/audio-visualizer/audio-visualizer-1a47e1f4c5e6d31d_bg.wasm" crossorigin="anonymous" integrity="sha384-6dBq+8P2jp6tdjHUWpteCCLsxCXLinxUYsRizepwpDHt6x0DVPbREQ+IAthOMUI3" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/audio-visualizer/audio-visualizer-343743a0bb922b9d.js" crossorigin="anonymous" integrity="sha384-Surgrl+1ZbEXD4I2bLieiUiFqDBDiyvWxb+oZaANdAmdU5y/Irl9PSagCQ9ETqVb"><link rel="preload" href="/audio-visualizer/audio-visualizer-343743a0bb922b9d_bg.wasm" crossorigin="anonymous" integrity="sha384-UXX+opQBQbIS85Ldqojo0Oo0igwAQBZyea4ci+Kw60gGsj+EtI9eNbFA9ajdRLO3" as="fetch" type="application/wasm"></head>
 <body>
   <div id="start-overlay">Start</div>
   <canvas id="canvas"></canvas>
